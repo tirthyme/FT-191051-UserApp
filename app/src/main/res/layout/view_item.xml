@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_marginTop="8dp"
+    android:layout_marginStart="8dp"
+    android:layout_marginEnd="8dp"
+    android:id="@+id/card_layout"
+    app:cardBackgroundColor="#FFFFE8">
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:orientation="vertical"
+            android:id="@+id/map_layout"
+            android:layout_height="250px">
+            <com.mapbox.mapboxsdk.maps.MapView
+                android:id="@+id/mapView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_above="@+id/title"
+                android:minHeight="80dp"
+                />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Meeting Point Name"
+            android:id="@+id/title"
+            android:maxLines="1"
+            android:layout_below="@+id/map_layout"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:layout_toStartOf="@+id/timestamp"
+            android:layout_alignParentStart="true"
+            android:ellipsize="end" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TimeStamp"
+            android:id="@+id/timestamp"
+            android:layout_below="@+id/map_layout"
+            android:layout_alignParentEnd="true"
+            android:textAppearance="@style/TextAppearance.AppCompat.Small"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:text="Meeting Point Address"
+            android:layout_below="@+id/title"
+            android:id="@+id/address"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:text="Delivered By: Name"
+            android:id="@+id/del_name"
+            android:layout_below="@+id/address"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:text="Delivery Person Phone: Phone"
+            android:id="@+id/del_phone"
+            android:layout_below="@+id/del_name"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:text="Status: On Way"
+            android:id="@+id/status"
+            android:layout_below="@+id/del_phone"/>
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>
