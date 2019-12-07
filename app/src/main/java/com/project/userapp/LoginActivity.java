@@ -81,6 +81,7 @@ public class LoginActivity extends AppCompatActivity {
                     Toast.makeText(LoginActivity.this, "Invalid Credentials", Toast.LENGTH_LONG).show();
                     txt_error.setText("Invalid Credentials.. Please LogIn Again");
                     Log.d("Login",task.getException().toString());
+                    btn_login.setEnabled(true);
                     progressBar.setVisibility(View.GONE);
                 }
             }

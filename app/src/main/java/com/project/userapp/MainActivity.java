@@ -4,6 +4,10 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.work.Constraints;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,9 +17,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -51,12 +57,15 @@ import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
 import com.mapbox.mapboxsdk.maps.Style;
 import com.mapbox.mapboxsdk.plugins.markerview.MarkerView;
 import com.mapbox.mapboxsdk.plugins.markerview.MarkerViewManager;
+import com.project.userapp.Utilities.CommsNotificationManager;
+import com.project.userapp.Utilities.ScheduledRequestWork;
 
-import java.lang.reflect.Field;
-import java.util.Date;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import timber.log.Timber;
 
@@ -65,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     MapView mapView;
     MapboxMap mapboxMap;
     LocationComponent locationComponent;
+    String workID = "ScheduleWork";
     PermissionsManager permissionsManager;
     MarkerViewManager markerViewManager;
     ProgressBar progressBar;
@@ -83,7 +93,58 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         requester_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                request_meeting_point();
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this).setPositiveButton("Request Now.", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        request_meeting_point();
+                    }
+                }).setNegativeButton("Schedule Request", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        final View dialogView = View.inflate(MainActivity.this, R.layout.date_time_picker, null);
+                        final AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                        final DatePicker datePicker = dialogView.findViewById(R.id.date_picker);
+                        final TimePicker timePicker = dialogView.findViewById(R.id.time_picker);
+                        datePicker.setMinDate(System.currentTimeMillis());
+                        final long maxtime = System.currentTimeMillis()+(1000*60*60*24*7);
+                        datePicker.setMaxDate(maxtime);
+                        dialogView.findViewById(R.id.date_time_set).setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                Calendar calendar = new GregorianCalendar(datePicker.getYear(),
+                                        datePicker.getMonth(),
+                                        datePicker.getDayOfMonth(),
+                                        timePicker.getCurrentHour(),
+                                        timePicker.getCurrentMinute());
+                                long currentTime= System.currentTimeMillis();
+                                long specificTimeToTrigger = calendar.getTimeInMillis();
+                                long delayToPass = specificTimeToTrigger - currentTime;
+                                Log.d(TAG, "onClick: "+ delayToPass + "==" + currentTime);
+                                if(delayToPass > 0 && delayToPass<(1000*60*60*24*7)) {
+                                    Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                                            .build();
+                                    OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(ScheduledRequestWork.class)
+                                            .setConstraints(constraints)
+                                            .setInitialDelay(delayToPass, TimeUnit.MILLISECONDS)
+                                            .build();
+                                    WorkManager.getInstance(getApplicationContext()).enqueue(oneTimeWorkRequest);
+                                    alertDialog.dismiss();
+                                }else{
+                                    Toast.makeText(MainActivity.this, "Select Proper Time", Toast.LENGTH_SHORT).show();
+                                    alertDialog.dismiss();
+                                }
+                            }});
+                        alertDialog.setView(dialogView);
+                        dialog.dismiss();
+                        alertDialog.show();
+                    }
+                }).setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+                builder.show();
             }
         });
         mapView = findViewById(R.id.mapView);
@@ -103,6 +164,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             mapView.getMapAsync(this);
         }
     }
+
+
 
     public void signOut(View view){
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
@@ -351,7 +414,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         mp_data.put("MeetingPointAddress",(String) idealMeetingPoint.get("LocationAddress"));
                         mp_data.put("MeetingPointLat",String.valueOf(idealMeetingPoint.get("latitude")));
                         mp_data.put("MeetingPointLon",String.valueOf(idealMeetingPoint.get("longitude")));
-
                         request_data.put("meetingpointID",idealMeetingPoint.getId());
                         request_data.put("meetingpoint_info",mp_data);
 
@@ -360,6 +422,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                             public void onComplete(@NonNull Task<DocumentReference> task) {
                                 if (task.isSuccessful()){
                                     Log.d(TAG, "onComplete: Request Added " + task.getResult().getId());
+                                    CommsNotificationManager.getInstance(getApplicationContext()).display("Request Success", "Request has been added. Please View");
                                     Toast.makeText(MainActivity.this, "Request Added", Toast.LENGTH_SHORT).show();
                                     progressBar.setVisibility(View.GONE);
                                 }
