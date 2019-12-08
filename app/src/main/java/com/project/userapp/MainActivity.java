@@ -5,8 +5,10 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.work.Constraints;
+import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
 import android.content.DialogInterface;
@@ -29,6 +31,7 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -65,6 +68,7 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import timber.log.Timber;
@@ -93,58 +97,95 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         requester_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this).setPositiveButton("Request Now.", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        request_meeting_point();
-                    }
-                }).setNegativeButton("Schedule Request", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        final View dialogView = View.inflate(MainActivity.this, R.layout.date_time_picker, null);
-                        final AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-                        final DatePicker datePicker = dialogView.findViewById(R.id.date_picker);
-                        final TimePicker timePicker = dialogView.findViewById(R.id.time_picker);
-                        datePicker.setMinDate(System.currentTimeMillis());
-                        final long maxtime = System.currentTimeMillis()+(1000*60*60*24*7);
-                        datePicker.setMaxDate(maxtime);
-                        dialogView.findViewById(R.id.date_time_set).setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                Calendar calendar = new GregorianCalendar(datePicker.getYear(),
-                                        datePicker.getMonth(),
-                                        datePicker.getDayOfMonth(),
-                                        timePicker.getCurrentHour(),
-                                        timePicker.getCurrentMinute());
-                                long currentTime= System.currentTimeMillis();
-                                long specificTimeToTrigger = calendar.getTimeInMillis();
-                                long delayToPass = specificTimeToTrigger - currentTime;
-                                Log.d(TAG, "onClick: "+ delayToPass + "==" + currentTime);
-                                if(delayToPass > 0 && delayToPass<(1000*60*60*24*7)) {
-                                    Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                                            .build();
-                                    OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(ScheduledRequestWork.class)
-                                            .setConstraints(constraints)
-                                            .setInitialDelay(delayToPass, TimeUnit.MILLISECONDS)
-                                            .build();
-                                    WorkManager.getInstance(getApplicationContext()).enqueue(oneTimeWorkRequest);
-                                    alertDialog.dismiss();
-                                }else{
-                                    Toast.makeText(MainActivity.this, "Select Proper Time", Toast.LENGTH_SHORT).show();
-                                    alertDialog.dismiss();
+                if (!isWorkScheduled(workID)) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this).setPositiveButton("Request Right Now.", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            request_meeting_point();
+                        }
+                    }).setNegativeButton("Schedule your Request", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            final View dialogView = View.inflate(MainActivity.this, R.layout.date_time_picker, null);
+                            final AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                            final DatePicker datePicker = dialogView.findViewById(R.id.date_picker);
+                            final TimePicker timePicker = dialogView.findViewById(R.id.time_picker);
+                            datePicker.setMinDate(System.currentTimeMillis());
+                            final long maxtime = System.currentTimeMillis() + (1000 * 60 * 60 * 24 * 7);
+                            datePicker.setMaxDate(maxtime);
+                            dialogView.findViewById(R.id.date_time_set).setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    Calendar calendar = new GregorianCalendar(datePicker.getYear(),
+                                            datePicker.getMonth(),
+                                            datePicker.getDayOfMonth(),
+                                            timePicker.getCurrentHour(),
+                                            timePicker.getCurrentMinute());
+                                    long currentTime = System.currentTimeMillis();
+                                    long specificTimeToTrigger = calendar.getTimeInMillis();
+                                    long delayToPass = specificTimeToTrigger - currentTime;
+                                    Log.d(TAG, "onClick: " + delayToPass + "==" + currentTime);
+                                    if (delayToPass > 0 && delayToPass < (1000 * 60 * 60 * 24 * 7)) {
+                                        Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                                                .build();
+                                        OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(ScheduledRequestWork.class)
+                                                .setConstraints(constraints)
+                                                .setInitialDelay(delayToPass, TimeUnit.MILLISECONDS)
+                                                .build();
+                                        WorkManager.getInstance(getApplicationContext()).enqueueUniqueWork(workID, ExistingWorkPolicy.KEEP, oneTimeWorkRequest);
+                                        alertDialog.dismiss();
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "Select Proper Time", Toast.LENGTH_SHORT).show();
+                                        alertDialog.dismiss();
+                                    }
                                 }
-                            }});
-                        alertDialog.setView(dialogView);
-                        dialog.dismiss();
-                        alertDialog.show();
-                    }
-                }).setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
-                builder.show();
+                            });
+                            alertDialog.setView(dialogView);
+                            dialog.dismiss();
+                            alertDialog.show();
+                        }
+                    }).setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    });
+                    builder.show();
+                }else{
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this).setPositiveButton("Request Right Now.", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            request_meeting_point();
+                        }
+                    }).setNegativeButton("Cancel Scheduled Request", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                            AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this).setTitle("Are you sure you want to cancel?")
+                                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            WorkManager.getInstance(getApplicationContext()).cancelUniqueWork(workID);
+                                            Toast.makeText(MainActivity.this, "Request Cancelled", Toast.LENGTH_LONG).show();
+                                            dialog.dismiss();
+                                        }
+                                    }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.dismiss();
+                                        }
+                                    });
+                            dialog.dismiss();
+                            alertDialog.show();
+                        }
+                    }).setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    });
+                    builder.show();
+                }
             }
         });
         mapView = findViewById(R.id.mapView);
@@ -162,6 +203,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             m.setVisibility(View.VISIBLE);
             mapView.onCreate(savedInstanceState);
             mapView.getMapAsync(this);
+        }
+    }
+
+    private boolean isWorkScheduled(String tag) {
+        WorkManager instance = WorkManager.getInstance(getApplicationContext());
+        ListenableFuture<List<WorkInfo>> statuses = instance.getWorkInfosForUniqueWork(tag);
+        try {
+            boolean running = false;
+            List<WorkInfo> workInfoList = statuses.get();
+            for (WorkInfo workInfo : workInfoList) {
+                WorkInfo.State state = workInfo.getState();
+                running = state == WorkInfo.State.RUNNING | state == WorkInfo.State.ENQUEUED;
+            }
+            Log.d(TAG, "isWorkScheduled: "+ running);
+            return running;
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+            return false;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
