@@ -71,11 +71,15 @@ public class RequestsAdapter extends FirestoreRecyclerAdapter<Request,RequestsAd
         holder.title.setText(model.getMeetingpoint_info().get("MeetingPointName"));
         SimpleDateFormat sfd = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss a");
         holder.timestamp.setText(sfd.format(model.getRequest_time().toDate()));
-        if (model.getDriver_onWay().equals("no")){
+        if (model.getAccepted().equals("no")){
             holder.status.setText("Status: Waiting for Accepted");
         }else{
             holder.status.setText("Accepted");
+            if (model.getDriver_onWay().equals("yes")){
+                holder.status.setText("Accepted and Driver on Way");
+            }
         }
+
         holder.del_name.setText("Driver Name: " + model.getDriver_info().get("driver_name"));
         holder.del_phone.setText("Driver Phone: " + model.getDriver_info().get("driver_phone"));
         holder.address.setText("Meeting Point Address: " + model.getMeetingpoint_info().get("MeetingPointAddress"));
