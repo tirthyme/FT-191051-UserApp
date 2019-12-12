@@ -238,7 +238,7 @@ public class NavigationActivity extends AppCompatActivity implements OnNavigatio
                 NavigationViewOptions.builder()
                         .navigationListener(this)
                         .directionsRoute(directionsRoute)
-                        .shouldSimulateRoute(true)
+                        .shouldSimulateRoute(false)
                         .progressChangeListener(this)
                         .instructionListListener(this)
                         .speechAnnouncementListener(this)
