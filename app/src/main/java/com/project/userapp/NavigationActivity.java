@@ -27,6 +27,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.mapbox.api.directions.v5.models.BannerInstructions;
 import com.mapbox.api.directions.v5.models.DirectionsResponse;
 import com.mapbox.api.directions.v5.models.DirectionsRoute;
@@ -45,6 +46,7 @@ import com.mapbox.services.android.navigation.ui.v5.voice.SpeechAnnouncement;
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute;
 import com.mapbox.services.android.navigation.v5.routeprogress.ProgressChangeListener;
 import com.mapbox.services.android.navigation.v5.routeprogress.RouteProgress;
+import com.project.userapp.Utilities.CommsNotificationManager;
 
 import java.io.File;
 
@@ -70,6 +72,9 @@ public class NavigationActivity extends AppCompatActivity implements OnNavigatio
     private boolean instructionListShown = false;
     FusedLocationProviderClient fusedLocationProviderClient;
     private static final String TAG = "NavigationActivity";
+    Intent intent;
+    String meetingpointID;
+    String reqId;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -78,7 +83,9 @@ public class NavigationActivity extends AppCompatActivity implements OnNavigatio
         setContentView(R.layout.activity_navigation);
         setTheme(R.style.Theme_AppCompat_Light_NoActionBar);
         initNightMode();
-        final Intent intent = getIntent();
+        intent = getIntent();
+        meetingpointID = intent.getStringExtra("meetingpointID");
+        reqId = intent.getStringExtra("requestID");
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         navigationView = findViewById(R.id.navigationView);
         navigationView.onCreate(savedInstanceState);
@@ -181,7 +188,6 @@ public class NavigationActivity extends AppCompatActivity implements OnNavigatio
     @Override
     public void onNavigationFinished() {
         // Intentionally empty
-
     }
 
     @Override
@@ -189,9 +195,20 @@ public class NavigationActivity extends AppCompatActivity implements OnNavigatio
         // Intentionally empty
     }
 
+    boolean flag = false;
+
     @Override
     public void onProgressChange(Location location, RouteProgress routeProgress) {
         setSpeed(location);
+        if(routeProgress.distanceRemaining()<=15 && !flag){
+            flag = true;
+            FirebaseFirestore.getInstance().collection("requests_master").document(reqId).update("client_onWay","reached").addOnCompleteListener(new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(@NonNull Task<Void> task) {
+                    CommsNotificationManager.getInstance(getApplicationContext()).displayConfirmation("Reached Destination","You've reached your destination");
+                }
+            });
+        }
     }
 
     @Override
