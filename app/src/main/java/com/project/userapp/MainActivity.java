@@ -289,11 +289,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
     FusedLocationProviderClient fusedLocationProviderClient;
     private void enableLocationPlugin(@NonNull Style loadedMapStyle) {
-// Check if permissions are enabled and if not request
         if (PermissionsManager.areLocationPermissionsGranted(this)) {
-
-            // Get an instance of the component. Adding in LocationComponentOptions is also an optional
-            // parameter
             locationComponent = mapboxMap.getLocationComponent();
             locationComponent.activateLocationComponent(LocationComponentActivationOptions.builder(
                     this, loadedMapStyle).build());
@@ -304,8 +300,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     getNearbyDrivers(task.getResult());
                 }
             });
-
-            // Set the component's camera mode
             locationComponent.setCameraMode(CameraMode.TRACKING);
             locationComponent.setRenderMode(RenderMode.NORMAL);
         } else {
