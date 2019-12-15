@@ -2,7 +2,7 @@ Definition: Real Time Recommender: Auto Track and Assignment
 
 Team ID :FT - 191051
 
-This is an app for OPPO FinTech Contest in IIT Bombay Techfest. Certain pre-requirements are there to run this app correctly:
+This is an app for OPPO FinTech Contest in IIT Bombay Techfest.
 
 Certain pre-requirements are there to run this app correctly:
 1. Active Location and Internet Connection
